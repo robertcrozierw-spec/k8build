@@ -1,6 +1,6 @@
 # K8build
 
-Personal project to build kubneretes cluster from scratch
+Personal project to build Kubneretes cluster from scratch
 Main learning goal is to gain bottom up understanding of clusters
 
 ## Prerequisites 
