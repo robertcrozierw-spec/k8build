@@ -15,3 +15,6 @@ disk: "10GiB"
 base:
 - template:_images/debian-12
 - template:_default/mounts
+
+ssh:
+  localPort: 2223
