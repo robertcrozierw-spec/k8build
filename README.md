@@ -10,6 +10,14 @@ Lima was chosen for its ease of use and flexible network configuration options.
 4 yaml files are specified in the VMs diecroty. For now the command will need to ran manually to create each one:
 limactl create --name=nameofVM ./locationofyaml
 
+As we require all vms and the host the ability to communicate with each other over SSH and other tools we went with the 
+"socket_vmnet (shared)" option. This is configured via option
+networks:
+- lima: shared
+
+This shared mode uses a virtual network configured by lima and handles dhcp internally.
+In future projects bridged mode may be implemented instead, this would allow external devices to connect, however connection may break from host <-> VMs when laptop is moved to another network, as the IP address and range would be coming from another DHCP server.
+
 ## Configure jumpbox
 We need to configure a terminal for access the other VMs, this could be a local machine, but instead we use the jumpbox VM.
 
@@ -47,9 +55,36 @@ Finally set permissions so that all binaries are executable
   chmod +x downloads/{client,cni-plugins,controller,worker}/*
 }
 
-## Install Kubectl
+### Install Kubectl
 
 Kubectl is the standard commandline tool for interacting with K8s
 
 We just copy the binary into the relevant directory:
 cp downloads/client/kubectl /usr/local/bin/
+
+## Configure compute resources
+Next steps will be configure root access via password and key
+Configure machines.txt file to allow us to configure in bulk all computer VMs
+
+### Configure Root SSH access
+As this is a lab environment we will configure Root SSH access for convenience.
+The version of Debian we are using requires us to enable the Root account
+
+For each VM we will need to 
+- Enable Root account
+"sudo passwd root"
+- Enable SSH via Root account
+This is done changing the /etc/ssh/sshd_config file
+PermitRootLogin yes
+PasswordAuthentication yes
+
+### Configure SSH access via public/private key
+On jumpbox generate SSH key 
+ssh-keygen
+Copy to all machines:
+
+while read IP FQDN HOST SUBNET; do
+  ssh-copy-id root@${IP}
+done < machines.txt
+
+### Configure Hostnames of resources

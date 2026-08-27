@@ -15,3 +15,13 @@ disk: "20GiB"
 base:
 - template:_images/debian-12
 - template:_default/mounts
+
+networks:
+ # Lima can manage the socket_vmnet daemon for networks defined in $LIMA_HOME/_config/networks.yaml automatically.
+  # The socket_vmnet binary must be installed into a secure location only alterable by the "root" user.
+- lima: shared
+  #   # MAC address of the instance; lima will pick one based on the instance name,
+  #   # so DHCP assigned ip addresses should remain constant over instance restarts.
+  #   macAddress: ""
+  #   # Interface name, defaults to "lima0", "lima1", etc.
+  #   interface: ""

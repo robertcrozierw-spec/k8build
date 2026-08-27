@@ -1,0 +1,20 @@
+vmType: "vz"
+
+# CPUs
+# 🟢 Builtin default: min(4, host CPU cores)
+cpus: 1
+
+# Memory size
+# 🟢 Builtin default: min("4GiB", half of host memory)
+memory: "512MiB"
+
+# Disk size
+# 🟢 Builtin default: "100GiB"
+disk: "10GiB"
+
+base:
+- template:_images/debian-12
+- template:_default/mounts
+
+networks:
+- vzNAT: true

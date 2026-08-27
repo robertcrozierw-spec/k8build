@@ -6,11 +6,11 @@ cpus: 1
 
 # Memory size
 # 🟢 Builtin default: min("4GiB", half of host memory)
-memory: "2GiB"
+memory: "512MiB"
 
 # Disk size
 # 🟢 Builtin default: "100GiB"
-disk: "20GiB"
+disk: "10GiB"
 
 base:
 - template:_images/debian-12
