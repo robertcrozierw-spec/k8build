@@ -222,9 +222,19 @@ Unlike the  above  Asymmetric cryptography, which is slow we want to use Symmetr
 
 -   Our example is clientA trying to access yourbank.com
 -   Client A sees your yourbank.com has a valid certificate
--   They both negotiate and create a secure shared key using a protocol called Diffie-Helman key exhange
--   Once Key is created this is used for encrypting the data for transfer(AES is the type fo encryption)
+-   They both negotiate and create a secure shared key using a protocol called Diffie-Helman key exchange
+-   Once Key is created this is used for encrypting the data for transfer(AES is the type for encryption)
 -   Key is temporary, a new one created each time a new sessions is started on website
+
+### mTLS
+Common method used in Kubernetes for components to securely communicate with each other
+These additional steps are necessary as you dont want for example rogue components connecting to the  API server
+
+- Where TLS requires only the server be authenticated to the clients. mTLS requires that the client also authenticates to the server.
+- This means that an additional stage takes place during the negotiation
+- The server requests and receives the client certificate
+- The client will now hash and sign(Using its private key) the existing handshake data and sends this value to the server
+- Server can then verify the signature using the clients public key, compares it to the hash of the same data
 
 ### Other notes
 
@@ -241,9 +251,148 @@ We can also have private self signed certificates.
 -   The CA signed certificate can be shared with all of the relevant applications or systems eg filserver and appserver
 -   We use the CA to issue a certificate to the filserver and appserver
 -       When appserver tries to connect to the fileserver, its sees its filecerver certificate is signed by the CA
--       It will trust the certificate because it can verify CA self signed certificate it already has
+-       It will trust the certificate because it can verify it with the CA self signed certificate it already has
 
 This wont work well if in public, because the public members would not have the Private CA's certificate already installed
-- so have not way of veryfying the authenticity of appserver
+- so have no way of verifying the authenticity of appserver
 
 
+## Generating Kubernetes Configuration Files for Authentication
+
+We will need to perform the following steps:
+
+- Create Keypairs for CA certificate
+- Generate Signed CA certificate
+- Create Keypairs and Issue certificates for kubernetes components and user
+- Transfer certs and keypairs to relevant VMs
+
+5 identities will be created
+
+    "admin"  = Actual user account
+    "node-0" "node-1" = The worker nodes (kubelets)
+    "kube-proxy" "kube-scheduler" = Services on worker
+    "kube-controller-manager" = Service on Server
+    "kube-api-server" = Service on Server
+    "service-accounts" = 
+
+### Generate self signed CA 
+
+First we need to generate a Self signed CA so that we can sign the additional certificate created
+
+#### Keypair of CA
+Create RSA Keypair called ca.key
+
+-       openssl genrsa -out ca.key 4096
+
+#### CA certificate
+Next the Self signed CA certificate
+
+-       openssl req -x509 -new -sha512 -noenc \
+        -key ca.key -days 3653 \
+        -config ca.conf \
+        -out ca.crt
+
+We Include the keypair (ca.key strictly speaking it would only need the private key)
+
+The relevant parts of the ca.conf:
+[req]
+distinguished_name = req_distinguished_name
+prompt             = no
+x509_extensions    = ca_x509_extensions
+
+[ca_x509_extensions]
+basicConstraints = CA:TRUE
+keyUsage         = cRLSign, keyCertSign
+
+[req_distinguished_name]
+C   = US
+ST  = Washington
+L   = Seattle
+CN  = CA
+
+The keyusage we can see has the "keycertSign" added this means it can be used to sign other certificates.
+The [req_distinguished_name] will be the subject info on the cert
+
+### Generate Keypairs and Signed Certificates for components
+
+Uses loop to move though list of identities above
+
+-   Generates Keypairs
+-   Generates CSR(Certificate Signing Request) files 
+-   CA issues cert via creating x509 certificate using above identity public key, and CSR. Then signs using CA private key
+
+for i in ${certs[*]}; do
+  openssl genrsa -out "${i}.key" 4096
+
+  openssl req -new -key "${i}.key" -sha256 \
+    -config "ca.conf" -section ${i} \
+    -out "${i}.csr"
+
+  openssl x509 -req -days 3653 -in "${i}.csr" \
+    -copy_extensions copyall \
+    -sha256 -CA "ca.crt" \
+    -CAkey "ca.key" \
+    -CAcreateserial \
+    -out "${i}.crt"
+done
+
+### Transfer issued certificates to relevant VMs
+
+For transferring to node VMs:
+
+for host in node-0 node-1; do
+  ssh root@${host} mkdir /var/lib/kubelet/
+
+  scp ca.crt root@${host}:/var/lib/kubelet/
+
+  scp ${host}.crt \
+    root@${host}:/var/lib/kubelet/kubelet.crt
+
+  scp ${host}.key \
+    root@${host}:/var/lib/kubelet/kubelet.key
+done
+
+For transferring to master or server:
+
+scp \
+  ca.key ca.crt \
+  kube-api-server.key kube-api-server.crt \
+  service-accounts.key service-accounts.crt \
+  root@server:~/
+
+## Kubeconfigs
+Kubeconfigs are File's containing information on the cluster
+- Name of cluster
+- Certificates to access
+- API of cluster URL
+
+They are used by kubectl, users and other services to connect to cluster
+
+For the kubelet's or nodes Kubeconfig, we must reference the
+-   CA cert
+-   Client keypair
+-   URL of API server 
+-   Embed - certs just means the certs will be within the Kubeconfig output file and just a path to them
+
+
+for host in node-0 node-1; do
+  kubectl config set-cluster kubernetes-the-hard-way \
+    --certificate-authority=ca.crt \
+    --embed-certs=true \
+    --server=https://server.kubernetes.local:6443 \
+    --kubeconfig=${host}.kubeconfig
+
+  kubectl config set-credentials system:node:${host} \
+    --client-certificate=${host}.crt \
+    --client-key=${host}.key \
+    --embed-certs=true \
+    --kubeconfig=${host}.kubeconfig
+
+  kubectl config set-context default \
+    --cluster=kubernetes-the-hard-way \
+    --user=system:node:${host} \
+    --kubeconfig=${host}.kubeconfig
+
+  kubectl config use-context default \
+    --kubeconfig=${host}.kubeconfig
+done
