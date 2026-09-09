@@ -119,7 +119,7 @@ to actually update the hostname.
 We made a slight alteration the original documentation as the host Ip as "127.0.1.1", however this
 did not match what I had "127.0.0.1" modified it as such
 
-We can test using the followin
+We can test using the following
 while read IP FQDN HOST SUBNET; do
   ssh -n root@${IP} hostname --fqdn
 done < machines.txt
@@ -228,7 +228,7 @@ Unlike the  above  Asymmetric cryptography, which is slow we want to use Symmetr
 
 ### mTLS
 Common method used in Kubernetes for components to securely communicate with each other
-These additional steps are necessary as you dont want for example rogue components connecting to the  API server
+These additional steps are necessary as you don't want for example rogue components connecting to the  API server
 
 - Where TLS requires only the server be authenticated to the clients. mTLS requires that the client also authenticates to the server.
 - This means that an additional stage takes place during the negotiation
@@ -248,9 +248,9 @@ see its issues by Digicert.
 #### Self signed certificates - private
 We can also have private self signed certificates.
 -   Within an organization or system, we might have an internal CA, this CA can just be a self signed certificate with a private key
--   The CA signed certificate can be shared with all of the relevant applications or systems eg filserver and appserver
--   We use the CA to issue a certificate to the filserver and appserver
--       When appserver tries to connect to the fileserver, its sees its filecerver certificate is signed by the CA
+-   The CA signed certificate can be shared with all of the relevant applications or systems eg fileserver and appserver
+-   We use the CA to issue a certificate to the fileserver and appserver
+-       When appserver tries to connect to the fileserver, its sees its fileserver certificate is signed by the CA
 -       It will trust the certificate because it can verify it with the CA self signed certificate it already has
 
 This wont work well if in public, because the public members would not have the Private CA's certificate already installed
@@ -261,9 +261,9 @@ This wont work well if in public, because the public members would not have the 
 
 We will need to perform the following steps:
 
-- Create Keypairs for CA certificate
+- Create keypairs for CA certificate
 - Generate Signed CA certificate
-- Create Keypairs and Issue certificates for kubernetes components and user
+- Create keypairs and Issue certificates for kubernetes components and user
 - Transfer certs and keypairs to relevant VMs
 
 5 identities will be created
@@ -280,7 +280,7 @@ We will need to perform the following steps:
 First we need to generate a Self signed CA so that we can sign the additional certificate created
 
 #### Keypair of CA
-Create RSA Keypair called ca.key
+Create RSA keypair called ca.key
 
 -       openssl genrsa -out ca.key 4096
 
@@ -313,11 +313,11 @@ CN  = CA
 The keyusage we can see has the "keycertSign" added this means it can be used to sign other certificates.
 The [req_distinguished_name] will be the subject info on the cert
 
-### Generate Keypairs and Signed Certificates for components
+### Generate keypairs and Signed Certificates for components
 
 Uses loop to move though list of identities above
 
--   Generates Keypairs
+-   Generates keypairs
 -   Generates CSR(Certificate Signing Request) files 
 -   CA issues cert via creating x509 certificate using above identity public key, and CSR. Then signs using CA private key
 
@@ -361,7 +361,7 @@ scp \
   root@server:~/
 
 ## Kubeconfigs
-Kubeconfigs are File's containing information on the cluster
+Kubeconfigs are file's containing information on the cluster
 - Name of cluster
 - Certificates to access
 - API of cluster URL
@@ -410,7 +410,7 @@ export ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
 
 We then use export this variable so it can be used in child process
 
-### Substitute the newly created enviroment key and move to Master
+### Substitute the newly created environment key and move to Master
 
 Using the envsubst we can add add the ENCRYPTION_KEY to a yaml file 
 
@@ -519,7 +519,7 @@ kubectl
 }
 
 The below will be moved to a new directorty
-The CA.key is inclulded as the kube-controller-manager will actually sign CSRs, however in this tutorial it may be unneeded as we amnaully issues all certs at the beinging and manually distributed them.
+The CA.key is included as the kube-controller-manager will actually sign CSRs, however in this tutorial it may be unneeded as we manually issues all certs at the beinging and manually distributed them.
 The serice account key is used kube-controller-manager to sign servie account tokens.
 kube-api-server will need the encryption-config.yaml to encrypt and decrypt etcd data
 {
@@ -547,7 +547,7 @@ mv kube-controller-manager.service /etc/systemd/system/
 
 ### Configure the Kubernetes Scheduler
 
-kubeconfig file we created prevouisly
+kubeconfig file we created previously
 mv kube-scheduler.kubeconfig /var/lib/kubernetes/
 
 Config file taken from kubernetes the hardway github
@@ -573,8 +573,8 @@ Created symlink /etc/systemd/system/multi-user.target.wants/kube-controller-mana
 Created symlink /etc/systemd/system/multi-user.target.wants/kube-scheduler.service → /etc/systemd/system/kube-scheduler.service.
 
 ### Confirm running controller services
-if we run the systemctl command we can see a list of all services on the VM
-We can see our kube realted sercices are active and runnning
+If we run the systemctl command we can see a list of all services on the VM
+We can see our kube related services are active and runnning
 ```
 UNIT                              LOAD   ACTIVE SUB     DESCRIPTION
 kube-apiserver.service            loaded active running Kubernetes API Server
@@ -591,17 +591,17 @@ Kubernetes control plane is running at https://127.0.0.1:6443
 
 Role based access control
 
-Grouping specific permissions into roles and applying those roles to users, groups or services accounts
+Grouping specific permissions into roles and applying those roles to users, groups or service accounts
 
-ClusterRoles are sets of permsisions that can be applied clusterwide or specific namespaces
+ClusterRoles are sets of permissions that can be applied clusterwide or specific namespaces
 Roles are sets of permissions that are applied to specific namespaces
 
-Once we have declared our Roles or Cluster roles we then need to bind them to users, groups or services accounts
+Once we have declared our Roles or ClusterRoles we then need to bind them to users, groups or services accounts
 This is done via Rolebinding or ClusterRoleBinding
 
 For Roles and Rolebindings the namespaces must be declared in each and be matching
 For ClusterRoles and ClusterRolebindings there is no need to declare namespaces
-We can also have ClusterRoles scoped to single namespaces by binding with Rolebinding
+We can also have ClusterRoles scoped to single namespaces by binding with a Rolebinding
 
 #### RBAC for Kubelet Authorization
 We need to grant RBAC permissions to the API server to access the Kubelets
@@ -632,3 +632,22 @@ root@lima-jumpbox:~/kubernetes-the-hard-way# curl --cacert ca.crt \
   "compiler": "gc",
   "platform": "linux/arm64"
 }
+
+## Bootstrapping the Kubernetes Worker Nodes
+
+Activates the netfilter module and adds it start up
+{
+  modprobe br-netfilter
+  echo "br-netfilter" >> /etc/modules-load.d/modules.conf
+}
+
+root@lima-jumpbox:~/kubernetes-the-hard-way# ssh root@server \
+  "kubectl get nodes \
+  --kubeconfig admin.kubeconfig"
+NAME     STATUS   ROLES    AGE   VERSION
+node-0   Ready    <none>   37s   v1.32.3
+node-1   Ready    <none>   40s   v1.32.3
+
+## Configuring kubectl for Remote Access
+
+## Provisioning Pod Network Routes
