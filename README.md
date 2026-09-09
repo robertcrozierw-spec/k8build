@@ -273,7 +273,7 @@ We will need to perform the following steps:
     "kube-proxy" "kube-scheduler" = Services on worker
     "kube-controller-manager" = Service on Server
     "kube-api-server" = Service on Server
-    "service-accounts" = 
+    "service-accounts" = Used as the pods identify
 
 ### Generate self signed CA 
 
@@ -396,3 +396,239 @@ for host in node-0 node-1; do
   kubectl config use-context default \
     --kubeconfig=${host}.kubeconfig
 done
+
+## Generating the Data Encryption Config and Key
+encryption-config.yaml is the layout required by K8s for encrypting valuable information at rest.
+
+### Create a random key 
+
+Using the /dev/urandom file we can generate a random number
+This allows us to use this random number as an encryption key
+
+Next we convert to a base64 for ease of use and store in variable
+export ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
+
+We then use export this variable so it can be used in child process
+
+### Substitute the newly created enviroment key and move to Master
+
+Using the envsubst we can add add the ENCRYPTION_KEY to a yaml file 
+
+envsubst < configs/encryption-config.yaml \
+  > encryption-config.yaml
+
+Move to to master server:
+-   scp encryption-config.yaml root@server:~/
+
+## Bootstrapping the etcd Cluster
+etcd is a key value database
+Used to store information about the cluster
+
+### Transfer binaries and systemd unit files
+
+We need to transfer the etcd binaries and its command line tool for interacting with it etcdctl
+
+We also need to move the systemd unit file etcd.service, this will be the configuration file for the etcd service
+
+scp \
+  downloads/controller/etcd \
+  downloads/client/etcdctl \
+  units/etcd.service \
+  root@server:~/
+
+### Install the binaries
+Move them to the usr/local/bin/
+{
+  mv etcd etcdctl /usr/local/bin/
+}
+
+We will then create 2 new directories and grant full access to the owner of /var/lib/etcd (root)
+Next step is to copy our CA cert (ca.crt), kube.api-server.key keypair and kube-api-server.crt into the /etc/etcd 
+The private key is required for etcd to sign part of the mtls handshake
+
+{
+  mkdir -p /etc/etcd /var/lib/etcd
+  chmod 700 /var/lib/etcd
+  cp ca.crt kube-api-server.key kube-api-server.crt \
+    /etc/etcd/
+}
+
+For the above keypairs and certs we used the api-server ones, however in production it would be better to generate unique ones for etcd
+
+Next we move the service file into the systemd directory
+
+-       mv etcd.service /etc/systemd/system/
+
+Start service
+
+-   systemctl daemon-reload
+-   systemctl enable etcd
+-   systemctl start etcd
+
+Confirm values are in database
+-   etcdctl member list
+
+Output:
+6702b0a34e2cfd39, started, controller, http://127.0.0.1:2380, http://127.0.0.1:2379, false
+
+| Field | Value |
+|---|---|
+| Member ID | `6702b0a34e2cfd39` |
+| Status | `started` |
+| Name | `controller` |
+| Peer URL | `http://127.0.0.1:2380` |
+| Client URL | `http://127.0.0.1:2379` |
+| Is Learner | `false` |
+
+## Bootstrapping the Kubernetes Control Plane
+
+Next step is to install the following module on our master server
+-Kubernetes API Server 
+-Scheduler
+-Controller Manager
+
+It is handled by this command
+This includes our binaries(including kubectl), systemd units, scheduler and API kubeconfig created previously 
+
+scp \
+  downloads/controller/kube-apiserver \
+  downloads/controller/kube-controller-manager \
+  downloads/controller/kube-scheduler \
+  downloads/client/kubectl \
+  units/kube-apiserver.service \
+  units/kube-controller-manager.service \
+  units/kube-scheduler.service \
+  configs/kube-scheduler.yaml \
+  configs/kube-apiserver-to-kubelet.yaml \
+  root@server:~/
+
+This includes our binaries(including kubectl), systemd units, scheduler and API kubeconfig created previously 
+
+### Provision the Kubernetes Control Plane
+On Server we need to Install the binaries(including kubectl)
+kube-apiserver
+kube-controller-manager
+kube-scheduler
+kubectl
+
+{
+  mv kube-apiserver \
+    kube-controller-manager \
+    kube-scheduler kubectl \
+    /usr/local/bin/
+}
+
+The below will be moved to a new directorty
+The CA.key is inclulded as the kube-controller-manager will actually sign CSRs, however in this tutorial it may be unneeded as we amnaully issues all certs at the beinging and manually distributed them.
+The serice account key is used kube-controller-manager to sign servie account tokens.
+kube-api-server will need the encryption-config.yaml to encrypt and decrypt etcd data
+{
+  mkdir -p /var/lib/kubernetes/
+
+  mv ca.crt ca.key \
+    kube-api-server.key kube-api-server.crt \
+    service-accounts.key service-accounts.crt \
+    encryption-config.yaml \
+    /var/lib/kubernetes/
+}
+
+Create systemd unit file kube-api-server
+
+mv kube-apiserver.service \
+  /etc/systemd/system/kube-apiserver.service
+
+### Configure the Kubernetes Controller Manager
+
+KubeConfig file we created previously
+mv kube-controller-manager.kubeconfig /var/lib/kubernetes/
+
+Create systemd unit
+mv kube-controller-manager.service /etc/systemd/system/
+
+### Configure the Kubernetes Scheduler
+
+kubeconfig file we created prevouisly
+mv kube-scheduler.kubeconfig /var/lib/kubernetes/
+
+Config file taken from kubernetes the hardway github
+mv kube-scheduler.yaml /etc/kubernetes/config/
+
+Create systemd unit file
+mv kube-scheduler.service /etc/systemd/system/
+
+### Start the controller services
+
+{
+  systemctl daemon-reload
+
+  systemctl enable kube-apiserver \
+    kube-controller-manager kube-scheduler
+
+  systemctl start kube-apiserver \
+    kube-controller-manager kube-scheduler
+}
+output:
+Created symlink /etc/systemd/system/multi-user.target.wants/kube-apiserver.service → /etc/systemd/system/kube-apiserver.service.
+Created symlink /etc/systemd/system/multi-user.target.wants/kube-controller-manager.service → /etc/systemd/system/kube-controller-manager.service.
+Created symlink /etc/systemd/system/multi-user.target.wants/kube-scheduler.service → /etc/systemd/system/kube-scheduler.service.
+
+### Confirm running controller services
+if we run the systemctl command we can see a list of all services on the VM
+We can see our kube realted sercices are active and runnning
+```
+UNIT                              LOAD   ACTIVE SUB     DESCRIPTION
+kube-apiserver.service            loaded active running Kubernetes API Server
+kube-controller-manager.service   loaded active running Kubernetes Controller Manager
+kube-scheduler.service            loaded active running Kubernetes Scheduler
+```
+### Confirm Cluster control services are running
+kubectl cluster-info \
+  --kubeconfig admin.kubeconfig
+output:
+Kubernetes control plane is running at https://127.0.0.1:6443
+
+### Briefly on RBAC
+
+Role based access control
+
+Grouping specific permissions into roles and applying those roles to users, groups or services accounts
+
+ClusterRoles are sets of permsisions that can be applied clusterwide or specific namespaces
+Roles are sets of permissions that are applied to specific namespaces
+
+Once we have declared our Roles or Cluster roles we then need to bind them to users, groups or services accounts
+This is done via Rolebinding or ClusterRoleBinding
+
+For Roles and Rolebindings the namespaces must be declared in each and be matching
+For ClusterRoles and ClusterRolebindings there is no need to declare namespaces
+We can also have ClusterRoles scoped to single namespaces by binding with Rolebinding
+
+#### RBAC for Kubelet Authorization
+We need to grant RBAC permissions to the API server to access the Kubelets
+
+The folowing yaml file contains the clusterrole and clusterRolebinging
+kube-apiserver-to-kubelet.yaml
+We need to include the admin.kubconfig, as that is the "identity" used to perform the action of binding
+
+kubectl apply -f kube-apiserver-to-kubelet.yaml \
+  --kubeconfig admin.kubeconfig
+
+output:
+clusterrole.rbac.authorization.k8s.io/system:kube-apiserver-to-kubelet created
+clusterrolebinding.rbac.authorization.k8s.io/system:kube-apiserver created
+
+### Verify Control Plane is active 
+
+root@lima-jumpbox:~/kubernetes-the-hard-way# curl --cacert ca.crt \
+  https://server.kubernetes.local:6443/version
+{
+  "major": "1",
+  "minor": "32",
+  "gitVersion": "v1.32.3",
+  "gitCommit": "32cc146f75aad04beaaa245a7157eb35063a9f99",
+  "gitTreeState": "clean",
+  "buildDate": "2025-03-11T19:52:21Z",
+  "goVersion": "go1.23.6",
+  "compiler": "gc",
+  "platform": "linux/arm64"
+}
