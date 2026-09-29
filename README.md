@@ -733,13 +733,18 @@ kubelet does not have ClusterDNS IP configured and cannot create Pod using "Clus
 
 ### My own testing and Validation
 
-To start with I was getting more than one error when trying to apply the suggested deployment
+To start with I was getting more than one error when trying to apply the suggested deployment:
+```
  Warning  FailedCreatePodSandBox Failed to create pod sandbox: rpc error: code = Unknown desc = failed to create containerd task: failed to start shim: start failed: failed to create TTRPC connection: 
  dial unixYunix:///run/containerd/s/a7670ebd2cabff060174b155b92810c4570750934737724ec7f497fd808624dattrpc:
+```
+and
 
-As this appear to be related to containerd and shim the first step was to try a different version.
-First I removed tghe existing version
-Solution was to install latest version of containerd, runc and shim
+        kubelet does not have ClusterDNS IP configured and cannot create Pod using "ClusterFirst" policy. Falling back to "Default" policy
+
+As the first error is related to containerd and shim resolution was to install the latest version of containerd and runc on each
+
+Regarding the 2nd DNS error that will be discussed in a later section on DNS
 
 #### Test Pod deployment
 Using the yaml files in the TestPods section
@@ -783,7 +788,7 @@ exec --stdin --tty my-nginx -- /bin/bash
 root@my-nginx:/# ping 10.200.1.58
 PING 10.200.1.58 (10.200.1.58) 56(84) bytes of data.
 ```
-curl 10.200.1.58:80
+        curl 10.200.1.58:80
 
 However I receive no response from either
 
@@ -869,7 +874,7 @@ API gateway, load balancer, content cache, or other features.</p>
 ```
 
 However this should have already been resolved in the "Add the routes" section, the problem is the "ip route add" command
-that was used there and here is not persisten after reboot. +
+that was used there and here is not persisten after reboot. 
 
 
 
