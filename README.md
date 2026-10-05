@@ -17,7 +17,7 @@ limactl create --name=nameofVM ./locationofyaml
 
 Moving forward I will use the [`createVM.sh`](./createVM.sh) script instead.
 
-## Networking
+### Networking
 
 All VMs and the host need to be able to communicate with each other over SSH, so I went with the `socket_vmnet` (shared) option. This is configured with:
 
