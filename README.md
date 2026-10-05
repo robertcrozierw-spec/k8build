@@ -5,21 +5,35 @@ Main learning goal is to gain bottom up understanding of clusters.
 I will be following steps in the Kubernetes the hard way found here:
 https://github.com/kelseyhightower/kubernetes-the-hard-way/blob/master/docs/03-compute-resources.md
 
+## Prerequisites
 
-## Prerequisites 
-First we need to configure 4 VMs, as I am using a Macbook and plan on building everything locally I will use "Lima"
-Lima was chosen for its ease of use and flexible network configuration options.
+First I need to configure 4 VMs. As I am using a MacBook and plan on building everything locally, I will use [Lima](https://lima-vm.io/). Lima was chosen for its ease of use and flexible network configuration options.
 
-4 yaml files are specified in the VMs diecroty. For now the command will need to ran manually to create each one:
+The 4 YAML files are in the [`VMs`](./VMs) folder of this repo. Initially I used the following command to create each VM:
+
+```bash
 limactl create --name=nameofVM ./locationofyaml
+```
 
-As we require all vms and the host the ability to communicate with each other over SSH and other tools we went with the 
-"socket_vmnet (shared)" option. This is configured via option
+Moving forward I will use the [`createVM.sh`](./createVM.sh) script instead.
+
+## Networking
+
+All VMs and the host need to be able to communicate with each other over SSH, so I went with the `socket_vmnet` (shared) option. This is configured with:
+
+```yaml
 networks:
 - lima: shared
+```
 
-This shared mode uses a virtual network configured by lima and handles dhcp internally.
-In future projects bridged mode may be implemented instead, this would allow external devices to connect, however connection may break from host <-> VMs when laptop is moved to another network, as the IP address and range would be coming from another DHCP server.
+This provides 2 network interfaces on each VM:
+
+- `eth0` has the IP `192.168.5.15`. It is a special IP used by Lima's internal tools to talk to the VMs. It is the same on all of the VMs.
+- `lima0` has an IP in the `192.168.105.x` range. This is the IP used for communication between the VMs and the host using standard IP routing. It is what gets configured by the `shared` option.
+
+In shared mode, a virtual network is configured by Lima, with DHCP handled internally. This is fine for my lab environment, but it would cause issues if I wanted to add external devices to the network.
+
+In future projects, bridged mode may be used instead, which would allow external devices to connect. However, in bridged mode DHCP is handled by the external router, which could change the IPs and range of the VMs.
 
 ## Configure jumpbox
 We need to configure a terminal for access the other VMs, this could be a local machine, but instead we use the jumpbox VM.
@@ -744,6 +758,8 @@ and
 
 As the first error is related to containerd and shim resolution was to install the latest version of containerd and runc on each
 
+Once reoslved the next issue was accessing the master node
+
 Regarding the 2nd DNS error that will be discussed in a later section on DNS
 
 #### Test Pod deployment
@@ -874,7 +890,7 @@ API gateway, load balancer, content cache, or other features.</p>
 ```
 
 However this should have already been resolved in the "Add the routes" section, the problem is the "ip route add" command
-that was used there and here is not persisten after reboot. 
+is not persisten after reboot.
 
 
 
