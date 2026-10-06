@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: netutilsdefaultscpvc
+  labels:
+    app: netutils
+spec:
+  containers:
+    - name: netutils
+      image: jonlabelle/network-tools
+      command: [ "/bin/bash", "-c", "sleep infinity" ]
+      volumeMounts:
+        - mountPath: /data
+          name: data
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: app-data
