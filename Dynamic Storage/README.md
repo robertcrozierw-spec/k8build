@@ -1,4 +1,4 @@
-# Dynamic Storage And StorageClasses
+# Dynamic Storage And Default StorageClasses
 
 In a typical Kubernetes environment there is a requirement for dynamic provisioning of storage or PersistentVolumes (PV).
 
@@ -10,17 +10,17 @@ This section will explain a little more on the workings of StorageClasses, how t
 
 In Kubernetes their are 3 main storage concepts worth explaining.
 
--PersistentVolumes
--PersistentVolumeClaims
--StorageClasses
+-   PersistentVolumes
+-   PersistentVolumeClaims
+-   StorageClasses
 
 ### PersistentVolumes
 
 PVs are just standard volumes provisioned on the cluster. They exist outside a namespace so they can be used cluster-wide. We can have various types including:
 
--Local Volumes on the Nodes
--Remote Volumes on an NFS
--Cloud Volumes stored on some kind of cloud provider.
+-   Local Volumes on the Nodes
+-   Remote Volumes on an NFS
+-   Cloud Volumes stored on some kind of cloud provider.
 
 These PVs are created via a YAML manifest.
 
