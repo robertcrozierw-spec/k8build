@@ -61,3 +61,65 @@ Decides what criteria to create or pass to the PV, some examples include:
 -   Mount options
 -   Volume Expansion
 
+### Prerequisites
+
+-   NFS storage
+-   CSI plugin
+
+#### NFS storage
+As I will be using an NFS share to create the PVs an NFS server is required
+
+Using the instructions off the debian website  https://wiki.debian.org/NFS/Server I installed the server on the lima-jumpbox vm:
+```
+apt install nfs-kernel-server
+```
+Next create a directory to use as a file share:
+```
+mkdir /nfs_shares/share1
+```
+Modify the actual /etc/exports file to add the share, we will allow all VMs on the 192.168.15.0/24 range ReadWrite access to the share:
+```
+# /etc/exports: the access control list for filesystems which may be exported
+#		to NFS clients.  See exports(5).
+#
+# Example for NFSv2 and NFSv3:
+# /srv/homes       hostname1(rw,sync,no_subtree_check) hostname2(ro,sync,no_subtree_check)
+#
+# Example for NFSv4:
+# /srv/nfs4        gss/krb5i(rw,sync,fsid=0,crossmnt,no_subtree_check)
+# /srv/nfs4/homes  gss/krb5i(rw,sync,no_subtree_check)
+#
+/nfs_shares/share1 192.168.105.0/24(rw)
+```
+Run the exportfs -a command to export and make the share available
+As a quick test i will add a file to this newly created share and confirm I can see it on both Nodes:
+```
+echo "This is test content within the nfs share1" >> /nfs_shares/share1/nfsFile.txt
+```
+
+Next we move over to one of the Nodes.
+I will cerate a new directory for us to mount the share:
+```
+mkdir /nfs_server_shares/
+```
+However When trying to mount the share we get the following error:
+```
+mount 192.168.105.4:/nfs_shares/share1 /nfs_server_shares/
+mount: /nfs_server_shares: bad option; for several filesystems (e.g. nfs, cifs) you might need a /sbin/mount.<type> helper program.
+       dmesg(1) may have more information after failed mount system call.
+```
+
+For us to mount the share we first need to install an additional tool called "nfs-common":
+```
+apt install nfs-common
+````
+
+Once installed we try mount again using the 
+```
+mount 192.168.105.4:/nfs_shares/share1 /nfs_server_shares/
+```
+Now it is successful and we can view the file within the newly mounted share:
+```
+cat /nfs_server_shares/nfsFile.txt
+This is test content within the nfs share1
+```
