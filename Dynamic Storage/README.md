@@ -2,9 +2,9 @@
 
 In a typical Kubernetes environment there is a requirement for dynamic provisioning of storage or PersistentVolumes (PV).
 
-This requirement comes from the need to reduce administrative load of manually creating PVs each time an application developer requests one. This process is implemented via StorageClasses (SC).
+This requirement comes from the need to reduce the administrative load of manually creating PVs each time an application developer requests one, a process implemented via StorageClasses (SC). There is also a need for a default StorageClass, as many applications and StatefulSets assume one is already configured. Without one, manual changes, such as adding a storageClassName, would be needed in every manifest applied.
 
-This section will explain a little more on the workings of StorageClasses, how they are configured and building the requirements necessary to implement them on our Kubernetes The Hard Way Cluster.
+This section will explain a little more on the workings of StorageClasses, how they are configured and building the requirements necessary to implement a default StorageClass on our Kubernetes The Hard Way Cluster.
 
 ## Storage Concepts And Types
 
@@ -56,38 +56,33 @@ For this example, as I will be using a StorageClass with an NFS provisioner, an 
 Specifically, I will be using the CSI plugin [nfs.csi.k8s.io](https://github.com/kubernetes-csi/csi-driver-nfs).
 
 #### Properties of the PVs
-Decides the settings pass to the PV, some examples include:
--   Reclaim policy = what happens after the PVC is deleted, is the PV deleted or retained?
+Decides the settings passed to the PV, some examples include:
+-   Reclaim policy = What happens after the PVC is deleted, is the PV deleted or retained?
 -   Mount options
 -   Volume Expansion
 
-### Prerequisites
+## Prerequisites
 
 -   NFS storage
 -   CSI plugin
 
-#### NFS storage
+### NFS storage
 As I will be using an NFS share to create the PVs an NFS server is required
 
-Using the instructions off the debian website  https://wiki.debian.org/NFS/Server I installed the server on the lima-jumpbox vm:
+Using the instructions off the [debian website ](https://wiki.debian.org/NFS/Server)I installed the server on the lima-jumpbox VM:
 ```
 apt install nfs-kernel-server
 ```
 Next create a directory to use as a file share:
 ```
-mkdir /nfs_shares/share1
+mkdir -p /nfs_shares/share1
 ```
 Modify the actual /etc/exports file to add the share, we will allow all VMs on the 192.168.105.0/24 range ReadWrite access to the share:
 ```
 # /etc/exports: the access control list for filesystems which may be exported
 #		to NFS clients.  See exports(5).
-#
-# Example for NFSv2 and NFSv3:
-# /srv/homes       hostname1(rw,sync,no_subtree_check) hostname2(ro,sync,no_subtree_check)
-#
 # Example for NFSv4:
 # /srv/nfs4        gss/krb5i(rw,sync,fsid=0,crossmnt,no_subtree_check)
-# /srv/nfs4/homes  gss/krb5i(rw,sync,no_subtree_check)
 #
 /nfs_shares/share1 192.168.105.0/24(rw)
 ```
@@ -100,7 +95,7 @@ As a quick test I will add a file to this newly created share and confirm I can 
 echo "This is test content within the nfs share1" >> /nfs_shares/share1/nfsFile.txt
 ```
 
-Next we move over to one of the Node-0.
+Next we move over to one of our nodes, I will start with Node-0.
 I will create a new directory for us to mount the share:
 ```
 mkdir /nfs_server_shares/
@@ -126,7 +121,8 @@ cat /nfs_server_shares/nfsFile.txt
 This is test content within the nfs share1
 ```
 These steps are then repeated on Node-1.
-#### Install CSI plugin
+
+### Install CSI plugin
 
 As already mentioned we will be using an external CSI driver, this can be found here: [nfs.csi.k8s.io](https://github.com/kubernetes-csi/csi-driver-nfs)
 
@@ -153,7 +149,7 @@ deployment.apps/csi-nfs-controller created
 daemonset.apps/csi-nfs-node created
 NFS CSI driver installed successfully.
 ```
-As you can see it has created a deployment and daemonset both, we can confirm this by checking the running pods in the kube-system namespace:
+As you can see it has created a deployment and a daemonset, this can be confirmed by checking the running pods in the kube-system namespace:
 ```
 kubectl get pods -n kube-system
 NAME                                  READY   STATUS    RESTARTS       AGE
@@ -170,13 +166,13 @@ NAME             ATTACHREQUIRED   PODINFOONMOUNT   STORAGECAPACITY   TOKENREQUES
 nfs.csi.k8s.io   false            false            false             <unset>         false               Persistent   18m
 ```
 
-#### Create Default StorageClass
+## Create Default StorageClass
 Like before, first confirm that there is no configured StorageClass:
 ```
 kubectl get storageclass
 No resources found
 ```
-Next using the YAML file [DefaultStorageClass.yaml](DefaultStorageClass.yaml) we can create a StorageClass, this file was taken from the same repo as the CSI driver in the example section https://github.com/kubernetes-csi/csi-driver-nfs/blob/master/deploy/example/README.md with only the following change made:
+Next using the YAML file [DefaultStorageClass.yaml](DefaultStorageClass.yaml) we can create a StorageClass. This file was taken from the same repo as the CSI driver in the [example section](https://github.com/kubernetes-csi/csi-driver-nfs/blob/master/deploy/example/README.md) with only the following change made:
 ```
 metadata:
   name: nfs-csi
@@ -186,7 +182,7 @@ parameters:
   server: 192.168.105.4
   share: /nfs_shares/share1
 ```
-The server is the IP of our lima-jumpbox, the share is what we configured in the last section, the other important detail is the "storageclass.kubernetes.io/is-default-class: "true"", this is how the storageclass is configured as default.
+The server is the IP of our lima-jumpbox, the share is what we configured in the last section, the other important detail is the "storageclass.kubernetes.io/is-default-class: "true"", this is how the StorageClass is configured as default.
 
 Now when we rerun the command to check:
 ```
@@ -195,16 +191,16 @@ NAME                PROVISIONER      RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVO
 nfs-csi (default)   nfs.csi.k8s.io   Delete          Immediate           true                   12s
 ```
 
-### Create Dynamic storage
+## Create Dynamic storage
 
 This will involve 2 steps:
 -   Create a PersistentVolumeClaim
 -   Testing with a pod using the PVC 
 
-#### Create PersistentVolumeClaim
+### Create PersistentVolumeClaim
 
 We will use the attached yaml file [defaultSC-PVC.yaml](defaultSC-PVC.yaml).
-As we are testing the default storageclass, the storageclassname option has been removed. This should force the cluster to provision a PV via the default storage class(nfs-csi).
+As we are testing the default storageclass, the storageClassName option has been removed. This will allow the cluster to provision a PV via the default storage class(nfs-csi). It's worth mentioning if we were to add the field storageClassName but leave it empty with "", the cluster would try to use an existing PV, not dynamically create one.
 
 Once the [defaultSC-PVC.yaml](defaultSC-PVC.yaml) has been applied, the PVC now exists along with a PV on the nfs server:
 ```
@@ -222,7 +218,8 @@ It is also possible to verify the volume exists on the actual share by checking 
 ls /nfs_shares/share1/
 pvc-3a311b02-7d9b-48f4-8a75-78c18b7b28a6
 ```
-#### Testing with a pod using the PVC 
+
+### Testing with a pod using the PVC 
 
 Using the attached YAML [netutils-defaultSC-PVC.yaml](netutils-defaultSC-PVC.yaml) a pod will be created with basic network tools.
 
@@ -239,11 +236,11 @@ Along with the location to mount the PV:
         - mountPath: /data
           name: data
 ```
-Once saved and the pod is created, there are various ways that it can tested, the first way was exec into the pod itself and check if the storage is mounted:
+Once saved and the pod is created, there are various ways that it can tested, I can exec into the pod itself and check if the storage is mounted:
 ```
 kubectl exec --stdin --tty netutilsdefaultscpvc -- /bin/bash
 ```
-Running the df command it can be seen /data is pointing to a volume the nfs server(192.168.105.4):
+Running the df command it can be seen /data is pointing to a volume on the nfs server(192.168.105.4):
 ```
 netutilsdefaultscpvc:/# df
 Filesystem                                                                1K-blocks    Used Available Use% Mounted on
@@ -256,9 +253,9 @@ tmpfs                                                                        900
 tmpfs                                                                             4       0         4   0% /proc/acpi
 ```
 Testing readwrite via:
-````
+```
 netutilsdefaultscpvc:/# mkdir /data/testdir
-````
+```
 And moving back to the nfs server, it can be seen the directory has been created on the volume:
 ```
 root@lima-jumpbox:/# ls /nfs_shares/share1/pvc-3a311b02-7d9b-48f4-8a75-78c18b7b28a6/
