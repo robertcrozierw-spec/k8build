@@ -2,7 +2,7 @@
 
 In a typical Kubernetes environment there is a requirement for dynamic provisioning of storage or PersistentVolumes (PV).
 
-This requirement comes from the need to reduce the administrative load of manually creating PVs each time an application developer requests one, a process implemented via StorageClasses (SC). There is also a need for a default StorageClass, as many applications and StatefulSets assume one is already configured. Without one, manual changes, such as adding a storageClassName, would be needed in every manifest applied.
+This requirement comes from the need to reduce the administrative load of manually creating PVs each time an application developer requests one, a process implemented via StorageClasses (SC). There is also a need for a default StorageClass, as many applications and StatefulSets assume one is already configured. Without one, manual changes such as adding a storageClassName, would be needed in every manifest applied.
 
 This section will explain a little more on the workings of StorageClasses, how they are configured and building the requirements necessary to implement a default StorageClass on our Kubernetes The Hard Way Cluster.
 

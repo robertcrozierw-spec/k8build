@@ -4,7 +4,6 @@ vmType: "vz"
 cpus: 1
 
 # Memory size
-# 🟢 Builtin default: min("4GiB", half of host memory)
 memory: "512MiB"
 
 # Disk size
