@@ -5,36 +5,6 @@ Main learning goal is to gain bottom up understanding of clusters.
 I will be following steps in the Kubernetes the hard way found here:
 https://github.com/kelseyhightower/kubernetes-the-hard-way/blob/master/docs/03-compute-resources.md
 
-## Prerequisites
-
-First I need to configure 4 VMs. As I am using a MacBook and plan on building everything locally, I will use [Lima](https://lima-vm.io/). Lima was chosen for its ease of use and flexible network configuration options.
-
-The 4 YAML files are in the [`VMs`](./VMs) folder of this repo. Initially I used the following command to create each VM:
-
-```bash
-limactl create --name=nameofVM ./locationofyaml
-```
-
-Moving forward I will use the [`createVM.sh`](./createVM.sh) script instead.
-
-### Networking
-
-All VMs and the host need to be able to communicate with each other over SSH, so I went with the `socket_vmnet` (shared) option. This is configured with:
-
-```yaml
-networks:
-- lima: shared
-```
-
-This provides 2 network interfaces on each VM:
-
-- `eth0` has the IP `192.168.5.15`. It is a special IP used by Lima's internal tools to talk to the VMs. It is the same on all of the VMs.
-- `lima0` has an IP in the `192.168.105.x` range. This is the IP used for communication between the VMs and the host using standard IP routing. It is what gets configured by the `shared` option.
-
-In shared mode, a virtual network is configured by Lima, with DHCP handled internally. This is fine for my lab environment, but it would cause issues if I wanted to add external devices to the network.
-
-In future projects, bridged mode may be used instead, which would allow external devices to connect. However, in bridged mode DHCP is handled by the external router, which could change the IPs and range of the VMs.
-
 ## Configure jumpbox
 We need to configure a terminal for access the other VMs, this could be a local machine, but instead we use the jumpbox VM.
 
@@ -172,7 +142,7 @@ cat hosts >> /etc/hosts
 Now on the jumpbox you should be able ssh via hostname 
 eg ssh server
 
-### Final step! Append host files to each 
+### Final step! Append host files to each VM
 Append to hostfile on all compute resources
 
 while read IP FQDN HOST SUBNET; do
@@ -729,22 +699,6 @@ For the node-1 VM
 output:
 10.200.0.0/24 via 192.168.105.6 dev lima0 
 
-### Testing and Validation
-Running the following 
-        kubectl create deployment nginx \
-        --image=nginx:latest
-
-When i run
-     kubectl descibe deployments
-I am seeing the following errors:
-kubelet does not have ClusterDNS IP configured and cannot create Pod using "ClusterFirst" policy. Falling back to "Default" policy
-
-I can confirm by checking the nodes directly
-        kubectl describe nodes
-
-Seeing this on both nodes
-kubelet does not have ClusterDNS IP configured and cannot create Pod using "ClusterFirst" policy. Falling back to "Default" policy.
-
 ### My own testing and Validation
 
 To start with I was getting more than one error when trying to apply the suggested deployment:
@@ -756,7 +710,7 @@ and
 
         kubelet does not have ClusterDNS IP configured and cannot create Pod using "ClusterFirst" policy. Falling back to "Default" policy
 
-As the first error is related to containerd and shim resolution was to install the latest version of containerd and runc on each
+As the first error is related to containerd and shim the resolution was to install the latest version of containerd and runc on each Node
 
 Once reoslved the next issue was accessing the master node
 
@@ -813,7 +767,7 @@ I can see 2 possible reasons here:
 2. The my-nginx1 IP is not routable as it is on another node
 
 #### 1. 
-This is false, as we are trying to connect directly to via the IP, as long as the port is exposed in the initial yaml we should be ok.
+This is false, as we are trying to connect directly via the IP, as long as the port is exposed in the initial yaml we should be ok.
 
 I can confirm this via a curl command from a pod running on the same node
 ```
@@ -890,7 +844,7 @@ API gateway, load balancer, content cache, or other features.</p>
 ```
 
 However this should have already been resolved in the "Add the routes" section, the problem is the "ip route add" command
-is not persisten after reboot.
+is not persistent after reboot. This could be resolved by a start-script of somekind, or potentially a systemd service.
 
 
 
