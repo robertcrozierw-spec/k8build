@@ -1,4 +1,4 @@
-# 00-Prerequisites
+# Prerequisites
 
 First I need to configure 4 VMs. As I am using a MacBook and plan on building everything locally, I will use [Lima](https://lima-vm.io/). Lima was chosen for its ease of use and flexible network configuration options.
 
