@@ -1,4 +1,4 @@
-# Dynamic Storage And Default StorageClasses
+# Dynamic-Storage And Default StorageClasses
 
 In a typical Kubernetes environment there is a requirement for dynamic provisioning of storage or PersistentVolumes (PV).
 
