@@ -40,3 +40,11 @@ Finally set permissions so that all binaries are executable:
 ```
 chmod +x downloads/{client,cni-plugins,controller,worker}/*
 ```
+## Install Kubectl
+
+Kubectl is the standard commandline tool for interacting with K8s.
+
+I can just copy the binary into the relevant directory:
+´´´
+cp downloads/client/kubectl /usr/local/bin/
+´´´
