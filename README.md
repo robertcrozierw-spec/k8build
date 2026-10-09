@@ -6,8 +6,7 @@ I will be following steps in the Kubernetes the hard way found here:
 https://github.com/kelseyhightower/kubernetes-the-hard-way/blob/master/docs/03-compute-resources.md
 
 
-## Generating Kubernetes Configuration Files for Authentication
-
+## Generating the Kubernetes CA, Keys and Certificates
 We will need to perform the following steps:
 
 - Create keypairs for CA certificate
@@ -31,7 +30,7 @@ First we need to generate a Self signed CA so that we can sign the additional ce
 #### Keypair of CA
 Create RSA keypair called ca.key
 
--       openssl genrsa -out ca.key 4096
+-    openssl genrsa -out ca.key 4096
 
 #### CA certificate
 Next the Self signed CA certificate
@@ -397,6 +396,9 @@ Activates the netfilter module and adds it start up
 NAME     STATUS   ROLES    AGE   VERSION
 node-0   Ready    <none>   37s   v1.32.3
 node-1   Ready    <none>   40s   v1.32.3
+
+We can then transfer across the files needed:
+
 
 ## Configuring kubectl for Remote Access
 
