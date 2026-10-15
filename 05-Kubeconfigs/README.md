@@ -2,7 +2,7 @@
 
 Kubeconfigs are files containing information on the cluster(s), the client identity(ies), and the pairing of these. Typically they can be split into three components:
 
-- **Cluster**: Contains the name of the cluster, the URL of the API server, and either a link to, or, an embedded CA certificate.
+- **Cluster**: Contains the name of the cluster, the URL of the API server, and either a link to, or an embedded CA certificate.
 - **User**: The local name to be used along with the actual identity of the client (provided by its certificate). Also required is the client's private key, as it's needed for mTLS communication with the API server.
 - **Context**: As there might be multiple clusters and clients defined in the same kubeconfig, a context allows you to bind certain users with certain clusters. A context can also be used to define the default namespace for this binding. As you can define multiple contexts, the default context is set via `current-context`.
 
@@ -17,7 +17,7 @@ In total six files will be created:
 
 In Kubernetes the Hard Way, I do not define the kubeconfigs yaml files directly instead the kubectl tool is leveraged to do that for me. Using kubectl for this has multiple benefits, including handling the YAML formatting along with easier inclusion of the embedded certificates without needing to manually encode them.
 
-### Node-0.kubeconfig and Node-1.kubeconfig
+### node-0.kubeconfig and node-1.kubeconfig
 
 ```
 for host in node-0 node-1; do
@@ -122,7 +122,7 @@ done
 
 ### admin.kubeconfig
 
-´´´
+```
 {
   kubectl config set-cluster kubernetes-the-hard-way \
     --certificate-authority=ca.crt \
@@ -144,5 +144,29 @@ done
   kubectl config use-context default \
     --kubeconfig=admin.kubeconfig
 }
-´´´
+```
+
+## Distribute kubeconfigs to relevant VMs
+
+For the Nodes, the kube-proxy and kubelets (node-0 and node-1):
+```
+for host in node-0 node-1; do
+  ssh root@${host} "mkdir -p /var/lib/{kube-proxy,kubelet}"
+
+  scp kube-proxy.kubeconfig \
+    root@${host}:/var/lib/kube-proxy/kubeconfig \
+
+  scp ${host}.kubeconfig \
+    root@${host}:/var/lib/kubelet/kubeconfig
+done
+```
+
+For the master server the admin, kube-controller-manager and kube-scheduler:
+
+```
+scp admin.kubeconfig \
+  kube-controller-manager.kubeconfig \
+  kube-scheduler.kubeconfig \
+  root@server:~/
+```
 
