@@ -6,6 +6,9 @@ We will need to perform the following steps:
 - Create keypairs and Issue certificates for kubernetes components and users.
 - Transfer certs and keypairs to relevant VMs.
 
+In Kubernetes the Hard Way, a `ca.conf` file is provided that includes all of the options and fields needed for certificate generation and signing. As it is quite lengthy, I will not go through all of it. However, it is worth pointing out that some of the CN names and O groups must follow a specific format. For example, the kubelet certificates require `CN=system:node:<nodeName>` and `O=system:nodes`, as per the [Node Authorizer documentation](https://kubernetes.io/docs/reference/access-authn-authz/node/).
+
+
 5 identities will be created:
 
     "admin"  = Actual user account
@@ -53,10 +56,10 @@ The [req_distinguished_name] will be the subject info on the cert.
 
 ## Generate keypairs and Signed Certificates for components
 
-Uses loop to move though list of identities above
+Uses loop to move though list of identities above.
 
--   Generates keypairs
--   Generates CSR(Certificate Signing Request) files 
+-   Generates keypairs.
+-   Generates CSR(Certificate Signing Request) files.
 -   CA issues cert via creating x509 certificate using the identities public key, and CSR. Then signs using CA private key.
 ```
 for i in ${certs[*]}; do
