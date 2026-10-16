@@ -1,48 +1,27 @@
 # K8build
 
 Personal project to build Kubernetes cluster from scratch.
-Main learning goal is to gain bottom up understanding of clusters.
-I will be following steps in the Kubernetes the hard way found here:
+Main learning goal is to gain a bottom up understanding of Kubernetes clusters and some of the additional components that are typically included.
+I will be initially following steps in the Kubernetes the hard way found here:
 https://github.com/kelseyhightower/kubernetes-the-hard-way/blob/master/docs/03-compute-resources.md
 
+However, once completed I will be adding additional components such as coreDNS, MetalLB and Dynamic storage. Finally for testing I deploy this [aks-store-demo application](https://github.com/Azure-Samples/aks-store-demo). 
+Some of this content was initially done in another repo: [K8build-part-2](../K8build-part-2/) however, I have decided it is better suited here and am in the process of migrating it as such.
+
+## Contents
+
+- [Prerequisites: Lima and the VMs](./00-Prerequisites/)
+- [1. Configure Jumpbox](./01-Configure-Jumpbox/)
+- [2. Configure Compute Resources](./02-Configure-Compute-Resources/)
+- [3. PKI Theory](./03-PKI-Theory/)
+- [4. Certificate Generation](./04-Certificate-Generation/)
+- [5. Kubeconfigs](05-kubeconfigs/)
+- [6. Generating Data Encryption Config and Key]()
+- [7. Bootstrapping etcd Cluster]()
+- [8. Bootstrapping Kubernetes Control Plane]()
+- [9. Bootstrapping Kubernetes Worker Nodes]()
 
 
-## Kubeconfigs
-Kubeconfigs are file's containing information on the cluster
-- Name of cluster
-- Certificates to access
-- API of cluster URL
-
-They are used by kubectl, users and other services to connect to cluster
-
-For the kubelet's or nodes Kubeconfig, we must reference the
--   CA cert
--   Client keypair
--   URL of API server 
--   Embed - certs just means the certs will be within the Kubeconfig output file and just a path to them
-
-
-for host in node-0 node-1; do
-  kubectl config set-cluster kubernetes-the-hard-way \
-    --certificate-authority=ca.crt \
-    --embed-certs=true \
-    --server=https://server.kubernetes.local:6443 \
-    --kubeconfig=${host}.kubeconfig
-
-  kubectl config set-credentials system:node:${host} \
-    --client-certificate=${host}.crt \
-    --client-key=${host}.key \
-    --embed-certs=true \
-    --kubeconfig=${host}.kubeconfig
-
-  kubectl config set-context default \
-    --cluster=kubernetes-the-hard-way \
-    --user=system:node:${host} \
-    --kubeconfig=${host}.kubeconfig
-
-  kubectl config use-context default \
-    --kubeconfig=${host}.kubeconfig
-done
 
 ## Generating the Data Encryption Config and Key
 encryption-config.yaml is the layout required by K8s for encrypting valuable information at rest.
