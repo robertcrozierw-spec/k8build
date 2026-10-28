@@ -194,7 +194,7 @@ RBAC permissions need to be granted to the API server to access the Kubelets.
 
 The following yaml file contains the ClusterRole and ClusterRoleBinding:
 
-kube-apiserver-to-kubelet.yaml
+[kube-apiserver-to-kubelet.yaml](./kube-apiserver-to-kubelet.yaml)
 
 We need to include the admin.kubconfig, as that is the "identity" used to perform the action of binding
 ```
