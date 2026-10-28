@@ -1,6 +1,6 @@
 # Bootstrapping the Kubernetes Control Plane
 
-In this section I will install the following components on our master server:
+In this section I will install the following components on the control plane server:
 -   Kubernetes API Server 
 -   Scheduler
 -   Controller Manager
@@ -189,7 +189,7 @@ So this required a total of 4 separate files, it will work but it's an inflexibl
 A better solution is to implement it with ClusterRoles.
 In this example, declare a ClusterRole with the namespace-admin roles, lets call it ClusterRole-definition. Next use a Rolebinding to only apply ClusterRole-definition to namespace-A and namespace-B. Now the users of namespace-A and B will have admin access to their respective namespaces but this time with only 3 files and in future I only need to create a new Rolebinding not a new ClusterRole.
 
-#### RBAC for Kubelet Authorization
+### RBAC for Kubelet Authorization
 RBAC permissions need to be granted to the API server to access the Kubelets.
 
 The following yaml file contains the ClusterRole and ClusterRoleBinding:
@@ -207,10 +207,9 @@ clusterrole.rbac.authorization.k8s.io/system:kube-apiserver-to-kubelet created
 clusterrolebinding.rbac.authorization.k8s.io/system:kube-apiserver created
 ```
 
-### Verify Control Plane is active 
+## Verify Control Plane is active 
 
 Finally, we can verify the control plane is active by performing a curl request to it from the jumpbox server:
-
 ```
 root@lima-jumpbox:~/kubernetes-the-hard-way# curl --cacert ca.crt \
   https://server.kubernetes.local:6443/version
