@@ -19,7 +19,7 @@ Some of this content was initially done in another repo: [K8build-part-2](../K8b
 - [6. Generating Data Encryption Config and Key](./06-Generating-Data-Encryption-Config-And-Key/)
 - [7. Bootstrapping etcd Cluster](./07-Bootstrapping-etcd/)
 - [8. Bootstrapping Kubernetes Control Plane](./08-Bootstrapping-Kubernetes-Control-Plane/)
-- [9. Bootstrapping Kubernetes Worker Nodes]()
+- [9. Bootstrapping Kubernetes Worker Nodes](./09-Bootstrapping-Kubernetes-Worker-Nodes/)
 
 
 
