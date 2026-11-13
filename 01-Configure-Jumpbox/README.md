@@ -1,9 +1,9 @@
 # Configure jumpbox
-We need to configure a terminal for accessing the other VMs, this could be the local machine, we will the jumpbox VM.
+We need to configure a terminal for accessing the other VMs, this could be the local machine, we will use the jumpbox VM.
 
 ## First we clone the git repo to our jumpbox:
 ```
-sudo git clone --depth 1   https://github.com/kelseyhightower/kubernetes-the-hard-way.git
+sudo git clone --depth 1 https://github.com/kelseyhightower/kubernetes-the-hard-way.git
 ```
 ## Download required binaries and extract
 We use the txt file within the previously cloned Git repo to get the list of required binaries.
@@ -45,6 +45,6 @@ chmod +x downloads/{client,cni-plugins,controller,worker}/*
 Kubectl is the standard commandline tool for interacting with K8s.
 
 I can just copy the binary into the relevant directory:
-´´´
+```
 cp downloads/client/kubectl /usr/local/bin/
-´´´
+```
